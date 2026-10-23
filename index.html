@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="MOLE FEVER - 세련된 2D 아케이드 두더지 잡기 게임. 30초 동안 콤보를 쌓아 피버 모드를 발동하고 최고 점수를 기록해보세요!">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>MOLE FEVER - 2D 아케이드 두더지 잡기</title>
+
+  <!-- Google Fonts: Outfit & Fredoka for modern arcade aesthetics -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="tier-1">
+  <!-- Dynamic Ambient Background Glows -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="glow-orb glow-top"></div>
+    <div class="glow-orb glow-bottom"></div>
+    <div class="fever-waves"></div>
+  </div>
+
+  <!-- Particle Canvas for Smooth 60fps FX -->
+  <canvas id="fx-canvas" class="fx-canvas" aria-hidden="true"></canvas>
+
+  <!-- Main Game Container (Mobile Card & Desktop Arcade Frame) -->
+  <main class="game-wrapper" id="game-app">
+    
+    <!-- Top Navigation / Utility Bar -->
+    <header class="app-header">
+      <div class="logo-group">
+        <span class="logo-badge" id="tier-badge">TIER 1</span>
+        <h1 class="game-title" id="main-title">
+          <span class="title-mole">MOLE</span>
+          <span class="title-fever">FEVER</span>
+        </h1>
+      </div>
+      <div class="header-actions">
+        <button id="btn-sound" class="icon-btn" aria-label="효과음 켜기/끄기" title="소리 토글">
+          <svg class="icon icon-sound-on" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg class="icon icon-sound-off hidden" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+        <button id="btn-help" class="icon-btn" aria-label="게임 방법 안내" title="게임 설명">
+          <svg class="icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Status HUD (Score, Timer, Combo) -->
+    <section class="hud-container" aria-label="게임 상태">
+      <!-- Score Card -->
+      <div class="hud-card score-card" id="card-score">
+        <span class="hud-label">SCORE</span>
+        <div class="hud-value-row">
+          <span class="hud-value" id="hud-score">0</span>
+          <span class="score-multiplier hidden" id="fever-multiplier">x2</span>
+        </div>
+        <div class="hud-sub">
+          <span class="sub-label">BEST</span>
+          <span class="sub-value" id="hud-highscore">0</span>
+        </div>
+      </div>
+
+      <!-- Timer Card -->
+      <div class="hud-card timer-card" id="card-timer">
+        <span class="hud-label">TIME</span>
+        <div class="hud-value-row">
+          <span class="hud-value timer-number" id="hud-timer">30</span>
+          <span class="hud-unit">s</span>
+        </div>
+        <!-- Progress Bar for Timer -->
+        <div class="timer-bar-track">
+          <div class="timer-bar-fill" id="timer-bar-fill"></div>
+        </div>
+      </div>
+
+      <!-- Combo Card -->
+      <div class="hud-card combo-card" id="card-combo">
+        <span class="hud-label">COMBO</span>
+        <div class="hud-value-row">
+          <span class="hud-value combo-number" id="hud-combo">0</span>
+        </div>
+        <div class="hud-sub">
+          <span class="sub-label">MAX</span>
+          <span class="sub-value" id="hud-maxcombo">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fever Status Banner (Hidden until 20 combo) -->
+    <div class="fever-banner hidden" id="fever-banner" aria-live="polite">
+      <div class="fever-banner-glow"></div>
+      <div class="fever-banner-content">
+        <span class="fever-badge-icon">🔥</span>
+        <span class="fever-text">FEVER MODE!</span>
+        <span class="fever-subtext">DOUBLE POINTS (+2)</span>
+        <span class="fever-badge-icon">🔥</span>
+      </div>
+    </div>
+
+    <!-- 3x3 Mole Board (Block Blast Inspired Grid) -->
+    <section class="board-frame" id="board-frame">
+      <div class="board-neon-rim" id="board-neon-rim"></div>
+      <div class="board-grid" id="board-grid" role="region" aria-label="두더지 게임판">
+        <!-- 9 Holes generated by JavaScript or static templates with proper deep layer structure -->
+        <div class="hole" data-index="0" id="hole-0">
+          <div class="hole-depth"></div>
+          <div class="mole-slot">
+            <div class="mole-wrapper" id="mole-0">
+              <!-- Inline SVG for Crisp, Vector Mole Character -->
+              <svg class="mole-svg" viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg">
+                <!-- Mole Body & Head -->
+                <defs>
+                  <linearGradient id="moleFurGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#8B5A2B" />
+                    <stop offset="50%" stop-color="#6F421C" />
+                    <stop offset="100%" stop-color="#543114" />
+                  </linearGradient>
+                  <linearGradient id="moleSnoutGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#FCE0D1" />
+                    <stop offset="100%" stop-color="#EAB9A2" />
+                  </linearGradient>
+                  <linearGradient id="helmetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFDD00" />
+                    <stop offset="60%" stop-color="#F5A623" />
+                    <stop offset="100%" stop-color="#D97706" />
+                  </linearGradient>
+                  <linearGradient id="goldCrownGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFE066" />
+                    <stop offset="100%" stop-color="#F59E0B" />
+                  </linearGradient>
+                </defs>
+
+                <!-- Normal Character Group -->
+                <g class="mole-body-group">
+                  <!-- Ears -->
+                  <circle cx="28" cy="46" r="14" fill="#6F421C" />
+                  <circle cx="28" cy="46" r="8" fill="#F8B4B4" />
+                  <circle cx="92" cy="46" r="14" fill="#6F421C" />
+                  <circle cx="92" cy="46" r="8" fill="#F8B4B4" />
+
+                  <!-- Torso & Head -->
+                  <ellipse cx="60" cy="85" rx="42" ry="40" fill="url(#moleFurGrad)" />
+                  <ellipse cx="60" cy="56" rx="36" ry="32" fill="url(#moleFurGrad)" />
+
+                  <!-- Cute Arcade Helmet / Cap -->
+                  <g class="mole-helmet">
+                    <path d="M 27 50 C 27 24, 93 24, 93 50 Z" fill="url(#helmetGrad)" />
+                    <rect x="23" y="47" width="74" height="7" rx="3.5" fill="#3B82F6" />
+                    <!-- Helmet Star Badge -->
+                    <polygon points="60,33 62,38 67,38 63,41 65,46 60,43 55,46 57,41 53,38 58,38" fill="#FFFFFF" />
+                  </g>
+
+                  <!-- Fever Crown (shown only in fever mode) -->
+                  <g class="mole-crown hidden">
+                    <path d="M 32 36 L 40 18 L 60 30 L 80 18 L 88 36 Z" fill="url(#goldCrownGrad)" stroke="#B45309" stroke-width="2" />
+                    <circle cx="40" cy="18" r="3" fill="#EF4444" />
+                    <circle cx="60" cy="30" r="3" fill="#3B82F6" />
+                    <circle cx="80" cy="18" r="3" fill="#10B981" />
+                  </g>
+
+                  <!-- Snout / Cheeks -->
+                  <ellipse cx="60" cy="74" rx="22" ry="15" fill="url(#moleSnoutGrad)" />
+                  <!-- Nose -->
+                  <ellipse cx="60" cy="67" rx="8" ry="5.5" fill="#2E1B0E" />
+                  <circle cx="58" cy="65" r="2" fill="#FFFFFF" opacity="0.8" />
+
+                  <!-- Smiling Mouth -->
+                  <path class="mole-mouth-normal" d="M 53 74 Q 60 82 67 74" fill="none" stroke="#2E1B0E" stroke-width="2.5" stroke-linecap="round" />
+
+                  <!-- Eyes (Normal) -->
+                  <g class="mole-eyes-normal">
+                    <ellipse cx="44" cy="56" rx="6" ry="7.5" fill="#1F2937" />
+                    <circle cx="42" cy="53" r="2.5" fill="#FFFFFF" />
+                    <circle cx="46" cy="58" r="1.2" fill="#FFFFFF" />
+                    <ellipse cx="76" cy="56" rx="6" ry="7.5" fill="#1F2937" />
+                    <circle cx="74" cy="53" r="2.5" fill="#FFFFFF" />
+                    <circle cx="78" cy="58" r="1.2" fill="#FFFFFF" />
+                    <!-- Rosy cheeks -->
+                    <ellipse cx="36" cy="67" rx="5" ry="3" fill="#F472B6" opacity="0.6" />
+                    <ellipse cx="84" cy="67" rx="5" ry="3" fill="#F472B6" opacity="0.6" />
+                  </g>
+
+                  <!-- Eyes (Hit / Dizzy - hidden by default) -->
+                  <g class="mole-eyes-hit hidden">
+                    <!-- Spiral / Cross Eyes -->
+                    <path d="M 39 52 L 49 62 M 49 52 L 39 62" stroke="#1F2937" stroke-width="3" stroke-linecap="round" />
+                    <path d="M 71 52 L 81 62 M 81 52 L 71 62" stroke="#1F2937" stroke-width="3" stroke-linecap="round" />
+                    <!-- Ouch Mouth -->
+                    <ellipse cx="60" cy="76" rx="5" ry="4" fill="#991B1B" />
+                    <!-- Bump with Stars -->
+                    <ellipse cx="72" cy="32" rx="7" ry="5" fill="#F87171" stroke="#DC2626" stroke-width="1.5" />
+                    <path class="hit-stars" d="M 82 22 L 85 28 L 91 28 L 86 32 L 88 38 L 82 34 L 76 38 L 78 32 L 73 28 L 79 28 Z" fill="#FBBF24" />
+                  </g>
+
+                  <!-- Paws resting on the rim -->
+                  <ellipse cx="32" cy="100" rx="9" ry="7" fill="url(#moleSnoutGrad)" stroke="#6F421C" stroke-width="1.5" />
+                  <ellipse cx="88" cy="100" rx="9" ry="7" fill="url(#moleSnoutGrad)" stroke="#6F421C" stroke-width="1.5" />
+                </g>
+              </svg>
+            </div>
+          </div>
+          <!-- Hole Front Mound Masking the Mole's Bottom -->
+          <div class="hole-rim">
+            <div class="rim-highlight"></div>
+          </div>
+          <!-- Floating score text anchor -->
+          <div class="floating-text-anchor" id="fx-anchor-0"></div>
+        </div>
+
+        <!-- Holes 1 through 8 will be cloned dynamically via JS or fully present for fast load -->
+        <!-- We will generate all 9 in script for cleanliness, or render here -->
+      </div>
+    </section>
+
+    <!-- Bottom Controls & Milestone Notification Area -->
+    <footer class="app-footer">
+      <div class="combo-milestone-toast hidden" id="combo-toast" aria-live="assertive">
+        <span class="toast-stars">✨</span>
+        <span class="toast-msg" id="combo-toast-msg">COMBO x5!</span>
+        <span class="toast-stars">✨</span>
+      </div>
+      <button id="btn-start-game" class="btn-primary" aria-label="게임 시작">
+        <span class="btn-shine"></span>
+        <span class="btn-text" id="btn-start-text">게임 시작</span>
+      </button>
+    </footer>
+
+  </main>
+
+  <!-- Game Over Modal / Result Overlay -->
+  <div class="modal-overlay hidden" id="modal-gameover" role="dialog" aria-modal="true" aria-labelledby="gameover-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-badge-row">
+          <span class="new-record-badge hidden" id="badge-new-record">🎉 NEW RECORD!</span>
+        </div>
+        <h2 class="modal-title" id="gameover-title">GAME OVER</h2>
+        <p class="modal-subtitle">수고하셨습니다! 당신의 활약 결과입니다.</p>
+      </div>
+
+      <div class="modal-stats">
+        <!-- Final Score -->
+        <div class="stat-box primary-stat">
+          <span class="stat-label">최종 점수 (FINAL SCORE)</span>
+          <span class="stat-value" id="res-score">0</span>
+        </div>
+
+        <!-- Stat Row -->
+        <div class="stat-split-row">
+          <div class="stat-box">
+            <span class="stat-label">최고 점수 (BEST)</span>
+            <span class="stat-value" id="res-highscore">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">최고 콤보 (MAX COMBO)</span>
+            <span class="stat-value" id="res-maxcombo">0</span>
+          </div>
+        </div>
+
+        <!-- Performance Feedback Grade -->
+        <div class="rating-box" id="res-rating-box">
+          <span class="rating-grade" id="res-grade">S</span>
+          <span class="rating-desc" id="res-comment">두더지 사냥의 신화!</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-restart" class="btn-primary btn-modal">
+          <span class="btn-shine"></span>
+          <span class="btn-text">다시 하기 (PLAY AGAIN)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help / Rules Modal -->
+  <div class="modal-overlay hidden" id="modal-help" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal-card modal-help-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="help-title">게임 방법</h2>
+      </div>
+      <div class="help-content">
+        <div class="help-item">
+          <div class="help-icon">⏱️</div>
+          <div class="help-info">
+            <strong>30초 제한 시간</strong>
+            <p>시작 버튼을 누르면 30초 카운트다운이 시작됩니다.</p>
+          </div>
+        </div>
+        <div class="help-item">
+          <div class="help-icon">🎯</div>
+          <div class="help-info">
+            <strong>두더지 잡기 & 콤보</strong>
+            <p>나타난 두더지를 클릭/터치하면 1점 획득! 놓치지 않고 연속으로 잡으면 콤보가 쌓입니다.</p>
+          </div>
+        </div>
+        <div class="help-item">
+          <div class="help-icon">🔥</div>
+          <div class="help-info">
+            <strong>20콤보 달성 시 피버 모드!</strong>
+            <p>연속 20콤보를 달성하면 피버 모드가 발동되며 1마리당 2점을 획득합니다!</p>
+          </div>
+        </div>
+        <div class="help-item">
+          <div class="help-icon">⚠️</div>
+          <div class="help-info">
+            <strong>두더지를 놓치면?</strong>
+            <p>잡지 못하고 들어가면 콤보가 리셋되며 피버 모드가 종료됩니다.</p>
+          </div>
+        </div>
+      </div>
+      <button id="btn-close-help" class="btn-secondary btn-modal">
+        <span class="btn-text">확인</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
