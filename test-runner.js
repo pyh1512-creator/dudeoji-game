@@ -25,7 +25,7 @@ function assert(condition, message) {
 }
 
 console.log('--- 1. Testing Files Existence ---');
-const files = ['index.html', 'style.css', 'script.js', 'server.js'];
+const files = ['index.html', 'style.css', 'script.js', 'dev-server.js'];
 files.forEach(f => {
   assert(fs.existsSync(path.join(rootDir, f)), `File ${f} exists`);
 });

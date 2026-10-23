@@ -45,7 +45,7 @@
 ### 방법 2. 내장 로컬 서버로 실행 (권장)
 터미널에서 아래 명령어를 실행한 후 웹 브라우저에서 접속합니다:
 ```bash
-node server.js
+node dev-server.js
 ```
 접속 주소: **http://localhost:3000**
 
